@@ -23,16 +23,34 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 const app = express();
 const server = http.createServer(app);
 
+const parseAllowedOrigins = () => {
+  const rawOrigins =
+    process.env.CLIENT_ORIGIN || "http://localhost:5173,https://shop-manager-001.onrender.com";
+  return rawOrigins
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+};
+
+const allowedOrigins = parseAllowedOrigins();
+
+const corsOriginHandler = (origin, callback) => {
+  // Allow non-browser tools (no Origin header) like curl/health checks.
+  if (!origin) return callback(null, true);
+  if (allowedOrigins.includes(origin)) return callback(null, true);
+  return callback(new Error("Not allowed by CORS"));
+};
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173"
+    origin: corsOriginHandler
   }
 });
 setSocketInstance(io);
 
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "http://localhost:5173"
+    origin: corsOriginHandler
   })
 );
 app.use(express.json());
